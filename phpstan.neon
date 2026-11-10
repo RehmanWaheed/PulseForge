@@ -1,0 +1,16 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - app/
+        - bootstrap/app.php
+        - config/
+        - routes/
+
+    # Level 8 for robust senior-level type safety without undue framework noise
+    level: 8
+
+    # Prevent loose type coercion
+    treatPhpDocTypesAsCertain: false
+

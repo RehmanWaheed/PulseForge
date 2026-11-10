@@ -1,0 +1,76 @@
+name: pulseforge
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pulseforge-app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - pulseforge-network
+
+  web:
+    image: nginx:alpine
+    container_name: pulseforge-web
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./:/var/www/html
+      - ./.docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - app
+    networks:
+      - pulseforge-network
+
+  mysql:
+    image: 'mysql:8.0'
+    container_name: pulseforge-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: 'pulseforge'
+      MYSQL_USER: 'pulseforge'
+      MYSQL_PASSWORD: 'secretpassword'
+      MYSQL_ROOT_PASSWORD: 'secretpassword'
+    ports:
+      - '33077:3306'
+    volumes:
+      - pulseforge-mysql-data:/var/lib/mysql
+    networks:
+      - pulseforge-network
+
+  redis:
+    image: 'redis:alpine'
+    container_name: pulseforge-redis
+    restart: unless-stopped
+    ports:
+      - '6380:6379'
+    volumes:
+      - pulseforge-redis-data:/data
+    networks:
+      - pulseforge-network
+
+  mailpit:
+    image: 'axllent/mailpit:latest'
+    container_name: pulseforge-mailpit
+    restart: unless-stopped
+    ports:
+      - '8025:8025'
+      - '1025:1025'
+    networks:
+      - pulseforge-network
+
+networks:
+  pulseforge-network:
+    driver: bridge
+
+volumes:
+  pulseforge-mysql-data:
+  pulseforge-redis-data:
+
