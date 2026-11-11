@@ -33,3 +33,4 @@ class SendIncidentResolvedAlertListener implements ShouldQueue
         }
     }
 }
+

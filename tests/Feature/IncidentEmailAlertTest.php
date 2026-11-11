@@ -93,3 +93,4 @@ test('it does not send notifications if tenant has no users attached', function 
 
     Notification::assertNothingSent();
 });
+
