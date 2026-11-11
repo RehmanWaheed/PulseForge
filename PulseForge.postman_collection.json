@@ -1,0 +1,912 @@
+{
+	"info": {
+		"_postman_id": "7f3c8e2a-4b19-4c8d-9e5a-202611110001",
+		"name": "PulseForge API & Realtime (Laravel 13)",
+		"description": "Ready-to-run Postman collection for PulseForge (Multi-Tenant Incident Management, Health Monitoring, Stripe Billing, and Laravel Reverb Realtime WebSockets).\n\nDefault Docker Host Ports:\n- App / API (Nginx): http://localhost:8080\n- Reverb WebSockets: ws://localhost:8085\n- Mailpit UI: http://localhost:8025\n\nTip for Realtime/Broadcast Auth:\nRun '6. Laravel Reverb Realtime & War Room Chat -> Load Realtime Dashboard (Login as Admin)' first so Postman stores your session cookie and automatically extracts {{csrf_token}}.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Health & System",
+			"description": "Application health check, root entry point, and Sanctum/authentication utilities.",
+			"item": [
+				{
+					"name": "Application Health Check",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/up",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"up"
+							]
+						},
+						"description": "Laravel built-in health check endpoint."
+					},
+					"response": []
+				},
+				{
+					"name": "Root Entry (Redirects to Realtime Demo)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								""
+							]
+						},
+						"description": "Redirects (302) to /demo/realtime."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Sanctum CSRF Cookie",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/sanctum/csrf-cookie",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"sanctum",
+								"csrf-cookie"
+							]
+						},
+						"description": "Initializes CSRF protection and stores the XSRF-TOKEN cookie in Postman's cookie jar."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Authenticated User (Sanctum Bearer)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{sanctum_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/user",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"user"
+							]
+						},
+						"description": "Returns the currently authenticated user via Sanctum. Set the `sanctum_token` collection variable to a valid Personal Access Token before running."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "2. Multi-Tenant Workspace (v1 API)",
+			"description": "Endpoints for inspecting active tenant workspaces and testing strict multi-tenancy resolution & isolation.",
+			"item": [
+				{
+					"name": "Get Active Workspace (by X-Tenant-Slug)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const json = pm.response.json();",
+									"    if (json && json.id) {",
+									"        pm.collectionVariables.set('tenant_id', String(json.id));",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Tenant-Slug",
+								"value": "{{tenant_slug}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/workspace",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"workspace"
+							]
+						},
+						"description": "Resolves the tenant workspace using the `X-Tenant-Slug` header (default: `acme`). Automatically updates `{{tenant_id}}`."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Active Workspace (by X-Tenant-ID)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Tenant-ID",
+								"value": "{{tenant_id}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/workspace",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"workspace"
+							]
+						},
+						"description": "Resolves the tenant workspace using the numeric `X-Tenant-ID` header."
+					},
+					"response": []
+				},
+				{
+					"name": "Inspect Secondary Tenant (Cyberdyne Free Plan)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Tenant-Slug",
+								"value": "{{secondary_tenant_slug}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/workspace",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"workspace"
+							]
+						},
+						"description": "Verifies multi-tenant isolation by fetching the seeded `cyberdyne` workspace (Free plan, monitor_limit: 5)."
+					},
+					"response": []
+				},
+				{
+					"name": "Unknown Tenant Isolation Check (Expect 404)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Tenant-Slug",
+								"value": "nonexistent-workspace",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/workspace",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"workspace"
+							]
+						},
+						"description": "Confirms fail-closed tenancy returns HTTP 404 when a tenant slug does not exist."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "3. Monitors (v1 API)",
+			"description": "Tenant-scoped endpoint health monitors protected by pessimistic DB row locking for quota enforcement.",
+			"item": [
+				{
+					"name": "List Tenant Monitors",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const list = pm.response.json();",
+									"    if (Array.isArray(list) && list.length > 0 && list[0].id) {",
+									"        pm.collectionVariables.set('monitor_id', String(list[0].id));",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Tenant-Slug",
+								"value": "{{tenant_slug}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/monitors",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"monitors"
+							]
+						},
+						"description": "Lists all monitors scoped to the active tenant (`{{tenant_slug}}`). Automatically sets `{{monitor_id}}` to the first monitor's ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Monitor (Basic)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Tenant-Slug",
+								"value": "{{tenant_slug}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Laravel Site\",\n    \"url\": \"https://laravel.com\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/monitors",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"monitors"
+							]
+						},
+						"description": "Creates a new monitor with default interval (60s) and expected status (200)."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Monitor (Custom Interval & Status Code)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Tenant-Slug",
+								"value": "{{tenant_slug}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Production Billing API\",\n    \"url\": \"https://api.github.com\",\n    \"check_interval_seconds\": 30,\n    \"expected_status_code\": 200\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/monitors",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"monitors"
+							]
+						},
+						"description": "Creates a monitor with all validated parameters (`name`, `url`, `check_interval_seconds` >= 10, `expected_status_code`)."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "4. Incidents (v1 API)",
+			"description": "Tenant-scoped incident history endpoints.",
+			"item": [
+				{
+					"name": "List Tenant Incidents",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const list = pm.response.json();",
+									"    if (Array.isArray(list) && list.length > 0 && list[0].id) {",
+									"        pm.collectionVariables.set('incident_id', String(list[0].id));",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Tenant-Slug",
+								"value": "{{tenant_slug}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/incidents",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"incidents"
+							]
+						},
+						"description": "Lists incidents (latest first) for the active tenant. Automatically sets `{{incident_id}}` if an incident exists."
+					},
+					"response": []
+				},
+				{
+					"name": "List Incidents for Secondary Tenant (Isolation Check)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Tenant-Slug",
+								"value": "{{secondary_tenant_slug}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/incidents",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"incidents"
+							]
+						},
+						"description": "Confirms `cyberdyne` cannot see `acme` incidents."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "5. Billing & Stripe Webhooks",
+			"description": "Simulated Stripe subscription lifecycle webhook events handled by HandleStripeWebhookAction.",
+			"item": [
+				{
+					"name": "Stripe Subscription Created (Pro Plan - 50 Monitors)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"type\": \"customer.subscription.created\",\n    \"data\": {\n        \"object\": {\n            \"id\": \"sub_demo_acme_123\",\n            \"customer\": \"cus_demo_acme_123\",\n            \"status\": \"active\",\n            \"metadata\": {\n                \"tenant_id\": 1,\n                \"plan\": \"pro\"\n            }\n        }\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/webhooks/stripe",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"webhooks",
+								"stripe"
+							]
+						},
+						"description": "Activates or restores Acme Corporation (`tenant_id: 1`) on the `pro` plan (`monitor_limit: 50`)."
+					},
+					"response": []
+				},
+				{
+					"name": "Stripe Subscription Updated (Enterprise Plan - 500 Monitors)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"type\": \"customer.subscription.updated\",\n    \"data\": {\n        \"object\": {\n            \"id\": \"sub_demo_acme_123\",\n            \"customer\": \"cus_demo_acme_123\",\n            \"status\": \"active\",\n            \"metadata\": {\n                \"tenant_id\": 1,\n                \"plan\": \"enterprise\"\n            }\n        }\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/webhooks/stripe",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"webhooks",
+								"stripe"
+							]
+						},
+						"description": "Upgrades Acme Corporation (`tenant_id: 1`) to the `enterprise` plan (`monitor_limit: 500`)."
+					},
+					"response": []
+				},
+				{
+					"name": "Stripe Subscription Deleted (Downgrade to Free - 5 Monitors)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"type\": \"customer.subscription.deleted\",\n    \"data\": {\n        \"object\": {\n            \"id\": \"sub_demo_acme_123\",\n            \"customer\": \"cus_demo_acme_123\",\n            \"status\": \"canceled\",\n            \"metadata\": {\n                \"tenant_id\": 1\n            }\n        }\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/webhooks/stripe",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"webhooks",
+								"stripe"
+							]
+						},
+						"description": "Cancels the subscription and downgrades Acme Corporation (`tenant_id: 1`) to the `free` plan (`monitor_limit: 5`). Run 'Stripe Subscription Created (Pro Plan)' afterwards to restore Pro tier."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "6. Laravel Reverb Realtime & War Room Chat",
+			"description": "Live WebSocket demo routes, real-time monitor heartbeat trigger, Incident War Room team chat, and Reverb private channel authentication.",
+			"item": [
+				{
+					"name": "Load Realtime Dashboard (Login as Admin)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const match = pm.response.text().match(/<meta\\s+name=\"csrf-token\"\\s+content=\"([^\"]+)\"/i);",
+									"if (match && match[1]) {",
+									"    pm.collectionVariables.set('csrf_token', match[1]);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/demo/realtime",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"demo",
+								"realtime"
+							]
+						},
+						"description": "Renders the Reverb Realtime Demo UI as `admin@pulseforge.test`, sets the session cookie, and automatically extracts `{{csrf_token}}` for channel authorization requests."
+					},
+					"response": []
+				},
+				{
+					"name": "Load Realtime Dashboard (Login as DevOps Engineer)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const match = pm.response.text().match(/<meta\\s+name=\"csrf-token\"\\s+content=\"([^\"]+)\"/i);",
+									"if (match && match[1]) {",
+									"    pm.collectionVariables.set('csrf_token', match[1]);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/demo/realtime?as=engineer",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"demo",
+								"realtime"
+							],
+							"query": [
+								{
+									"key": "as",
+									"value": "engineer"
+								}
+							]
+						},
+						"description": "Renders the Reverb Realtime Demo UI as `engineer@pulseforge.test` (Alex Rivers), switches the session cookie, and updates `{{csrf_token}}`."
+					},
+					"response": []
+				},
+				{
+					"name": "Trigger Monitor Ping & Broadcast Heartbeat",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"monitor_id\": {{monitor_id}}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/demo/realtime/trigger-check",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"demo",
+								"realtime",
+								"trigger-check"
+							]
+						},
+						"description": "Probes the selected monitor (`{{monitor_id}}`) immediately and broadcasts `MonitorCheckedEvent` over Reverb to `private-tenant.{{tenant_id}}`. Watch your open browser tab at http://localhost:8080/demo/realtime flash live!"
+					},
+					"response": []
+				},
+				{
+					"name": "Send Incident War Room Chat Message",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"incident_id\": {{incident_id}},\n    \"message\": \"Investigating elevated latency from Postman War Room client.\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/demo/realtime/messages",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"demo",
+								"realtime",
+								"messages"
+							]
+						},
+						"description": "Persists a chat message on the incident (`{{incident_id}}`) and broadcasts `IncidentChatMessageSentEvent` instantaneously via Reverb to `private-tenant.{{tenant_id}}.incident.{{incident_id}}`."
+					},
+					"response": []
+				},
+				{
+					"name": "Authorize Tenant Heartbeat Channel (Reverb Auth)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-CSRF-TOKEN",
+								"value": "{{csrf_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"channel_name\": \"private-tenant.{{tenant_id}}\",\n    \"socket_id\": \"1234.5678\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/broadcasting/auth",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"broadcasting",
+								"auth"
+							]
+						},
+						"description": "Authenticates the signed-in user for subscribing to `private-tenant.{tenantId}` on Reverb (`{{reverb_ws_url}}`). Run 'Load Realtime Dashboard' first so the session cookie and `{{csrf_token}}` are populated."
+					},
+					"response": []
+				},
+				{
+					"name": "Authorize War Room Incident Channel (Reverb Auth)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-CSRF-TOKEN",
+								"value": "{{csrf_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"channel_name\": \"private-tenant.{{tenant_id}}.incident.{{incident_id}}\",\n    \"socket_id\": \"1234.5678\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/broadcasting/auth",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"broadcasting",
+								"auth"
+							]
+						},
+						"description": "Authenticates the signed-in user for subscribing to `private-tenant.{tenantId}.incident.{incidentId}` on Reverb (`{{reverb_ws_url}}`). Run 'Load Realtime Dashboard' first so the session cookie and `{{csrf_token}}` are populated."
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "reverb_ws_url",
+			"value": "ws://localhost:8085",
+			"type": "string"
+		},
+		{
+			"key": "tenant_slug",
+			"value": "acme",
+			"type": "string"
+		},
+		{
+			"key": "secondary_tenant_slug",
+			"value": "cyberdyne",
+			"type": "string"
+		},
+		{
+			"key": "tenant_id",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "monitor_id",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "incident_id",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "csrf_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "sanctum_token",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
+
