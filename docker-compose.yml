@@ -66,6 +66,22 @@ services:
     networks:
       - pulseforge-network
 
+  reverb:
+    image: pulseforge-app:latest
+    container_name: pulseforge-reverb
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    command: php artisan reverb:start --host=0.0.0.0 --port=8080
+    ports:
+      - "8085:8080"
+    depends_on:
+      - app
+      - redis
+    networks:
+      - pulseforge-network
+
 networks:
   pulseforge-network:
     driver: bridge

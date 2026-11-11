@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Enums\IncidentSeverity;
+use App\Enums\IncidentStatus;
 use App\Enums\MonitorMethod;
 use App\Enums\MonitorStatus;
 use App\Enums\TenantPlan;
 use App\Enums\TenantRole;
+use App\Models\Incident;
 use App\Models\Monitor;
 use App\Models\Tenant;
 use App\Models\User;
@@ -23,11 +26,19 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. Create Team User
+        // 1. Create Team Users
         $user = User::query()->firstOrCreate(
             ['email' => 'admin@pulseforge.test'],
             [
-                'name' => 'Demo Admin',
+                'name' => 'Demo Admin (Incident Lead)',
+                'password' => Hash::make('password'),
+            ]
+        );
+
+        $engineer = User::query()->firstOrCreate(
+            ['email' => 'engineer@pulseforge.test'],
+            [
+                'name' => 'Alex Rivers (DevOps Lead)',
                 'password' => Hash::make('password'),
             ]
         );
@@ -46,9 +57,13 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // Attach user to Acme as Owner
+        // Attach users to Acme as Owner & Member
         if (! $user->belongsToTenant($acme)) {
             $user->tenants()->attach($acme->id, ['role' => TenantRole::Owner->value]);
+        }
+
+        if (! $engineer->belongsToTenant($acme)) {
+            $engineer->tenants()->attach($acme->id, ['role' => TenantRole::Admin->value]);
         }
 
         // 3. Create Tenant B: Cyberdyne (Free Plan - to show strict multi-tenancy isolation)
@@ -127,5 +142,20 @@ class DatabaseSeeder extends Seeder
                 'description' => 'Slack & PagerDuty Integration Channel',
             ]
         );
+
+        // 6. Create an Active Incident for War Room Demo
+        $failingMonitor = Monitor::query()->where('url', 'https://httpbin.org/status/503')->first();
+        if ($failingMonitor !== null) {
+            Incident::query()->firstOrCreate(
+                ['tenant_id' => $acme->id, 'title' => 'Payment Gateway Latency Spike & 503 Errors'],
+                [
+                    'monitor_id' => $failingMonitor->id,
+                    'status' => IncidentStatus::Investigating,
+                    'severity' => IncidentSeverity::Major,
+                    'description' => 'Payment Processing Service returned consecutive 503 Service Unavailable errors. Automated incident response initiated.',
+                    'started_at' => now()->subMinutes(12),
+                ]
+            );
+        }
     }
 }

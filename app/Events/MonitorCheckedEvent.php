@@ -8,11 +8,11 @@ use App\DTOs\MonitorCheckResultDTO;
 use App\Models\Monitor;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class MonitorCheckedEvent implements ShouldBroadcast
+class MonitorCheckedEvent implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -31,6 +31,14 @@ class MonitorCheckedEvent implements ShouldBroadcast
         return [
             new PrivateChannel(sprintf('tenant.%d', $this->monitor->tenant_id)),
         ];
+    }
+
+    /**
+     * The event's broadcast name.
+     */
+    public function broadcastAs(): string
+    {
+        return 'MonitorChecked';
     }
 
     /**
