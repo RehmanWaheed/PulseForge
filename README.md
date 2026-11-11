@@ -9,7 +9,7 @@
 
 ![PHP 8.4](https://img.shields.io/badge/PHP-8.4-777BB4?style=for-the-badge&logo=php&logoColor=white)
 ![Laravel 13](https://img.shields.io/badge/Laravel-13-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)
-![Pest 3](https://img.shields.io/badge/Tests-Pest_PHP_3_(49_Passed)-00D26A?style=for-the-badge)
+![Pest 3](https://img.shields.io/badge/Tests-Pest_PHP_3_(52_Passed)-00D26A?style=for-the-badge)
 ![Larastan Level 8](https://img.shields.io/badge/Larastan-Level_8_Passed-4E5D6C?style=for-the-badge)
 ![Laravel Pint](https://img.shields.io/badge/Code_Style-Laravel_Pint-000000?style=for-the-badge)
 ![Docker](https://img.shields.io/badge/Docker-Zero--Conflict_Isolated-2496ED?style=for-the-badge&logo=docker&logoColor=white)
@@ -136,7 +136,7 @@ docker compose exec app php artisan queue:work --queue=monitoring,webhooks,defau
 
 ## 🧪 Testing Suite (Pest PHP 3)
 
-PulseForge features **49 automated tests with 148 assertions** verifying end-to-end reliability:
+PulseForge features **52 automated tests with 151 assertions** verifying end-to-end reliability:
 
 ```bash
    PASS  Tests\Unit\ExampleTest
@@ -146,6 +146,7 @@ PulseForge features **49 automated tests with 148 assertions** verifying end-to-
    PASS  Tests\Feature\ArchitectureTest (Strict types, invokable actions, readonly DTOs)
    PASS  Tests\Feature\ExampleTest
    PASS  Tests\Feature\GeminiPostMortemTest (AI Root Cause Analysis & Plan Gating)
+   PASS  Tests\Feature\IncidentEmailAlertTest (Automated outage & recovery notifications)
    PASS  Tests\Feature\MonitorCheckEngineTest (HTTP probing, latency, timeouts)
    PASS  Tests\Feature\RealTimeAlertsTest (Laravel Reverb WebSocket broadcasting)
    PASS  Tests\Feature\StripeSubscriptionLifecycleTest (Subscription webhooks)
@@ -154,7 +155,7 @@ PulseForge features **49 automated tests with 148 assertions** verifying end-to-
    PASS  Tests\Feature\WebhookDeduplicationTest (Atomic state transitions & HMAC)
    PASS  Tests\Feature\WorkerStampedeLockTest (Redis atomic locking)
 
-Tests:    49 passed (148 assertions)
+Tests:    52 passed (151 assertions)
 Duration: ~30s
 ```
 
