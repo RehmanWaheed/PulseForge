@@ -65,4 +65,3 @@ class IncidentChatMessageSentEvent implements ShouldBroadcastNow
         ];
     }
 }
-

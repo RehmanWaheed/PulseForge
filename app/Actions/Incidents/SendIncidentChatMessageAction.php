@@ -31,4 +31,3 @@ class SendIncidentChatMessageAction
         return $chatMessage;
     }
 }
-
