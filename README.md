@@ -62,15 +62,15 @@ flowchart TD
 
 ### 1. Subscription Quota Defense (Pessimistic DB Row Lock)
 - **Problem:** Parallel concurrent API requests (e.g. 10 simultaneous requests from an automated script) could bypass plan monitor quotas because non-locking checks (`$count < $limit`) evaluate true before rows are committed.
-- **Solution:** [`CreateMonitorAction`](file:///E:/new-idea-project/app/Actions/Monitors/CreateMonitorAction.php) runs in a DB transaction with `Tenant::where('id', $id)->lockForUpdate()`, evaluating quotas under the lock and throwing [`SubscriptionQuotaExceededException`](file:///E:/new-idea-project/app/Exceptions/SubscriptionQuotaExceededException.php).
+- **Solution:** [`CreateMonitorAction`](./app/Actions/Monitors/CreateMonitorAction.php) runs in a DB transaction with `Tenant::where('id', $id)->lockForUpdate()`, evaluating quotas under the lock and throwing [`SubscriptionQuotaExceededException`](./app/Exceptions/SubscriptionQuotaExceededException.php).
 
 ### 2. Worker Stampede Defense (Redis Atomic Locks + DB Row Lock)
 - **Problem:** When an external service goes down, multiple concurrent background health-check workers report failures nearly simultaneously. Without locking, each worker would evaluate "Threshold exceeded" and create duplicate incident records.
-- **Solution:** [`ProcessMonitorFailureAction`](file:///E:/new-idea-project/app/Actions/Incidents/ProcessMonitorFailureAction.php) uses a distributed **Redis Atomic Lock** (`Cache::lock("incident:monitor:{$id}", 10)->block(5, ...)`) combined with a DB pessimistic check on unresolved incidents (`Incident::where('monitor_id', $id)->whereNull('resolved_at')->lockForUpdate()`). Only **one** incident is ever created per outage lifecycle.
+- **Solution:** [`ProcessMonitorFailureAction`](./app/Actions/Incidents/ProcessMonitorFailureAction.php) uses a distributed **Redis Atomic Lock** (`Cache::lock("incident:monitor:{$id}", 10)->block(5, ...)`) combined with a DB pessimistic check on unresolved incidents (`Incident::where('monitor_id', $id)->whereNull('resolved_at')->lockForUpdate()`). Only **one** incident is ever created per outage lifecycle.
 
 ### 3. Webhook Delivery Deduplication (Atomic SQL Transitions)
 - **Problem:** Queue retries and multi-worker execution can cause workers to process the same delivery record simultaneously, firing duplicate HTTP notifications to subscribers.
-- **Solution:** [`DispatchWebhookDeliveryAction`](file:///E:/new-idea-project/app/Actions/Webhooks/DispatchWebhookDeliveryAction.php) uses a direct conditional atomic SQL update:
+- **Solution:** [`DispatchWebhookDeliveryAction`](./app/Actions/Webhooks/DispatchWebhookDeliveryAction.php) uses a direct conditional atomic SQL update:
   ```sql
   UPDATE webhook_deliveries
   SET status = 'in_flight', attempts = attempts + 1, last_attempt_at = NOW()
@@ -82,10 +82,10 @@ flowchart TD
 
 ## 🛠️ Code Conventions & Design Patterns
 
-- **Single-Responsibility Actions:** Business logic lives exclusively in invokable Action classes (e.g., [`CreateMonitorAction`](file:///E:/new-idea-project/app/Actions/Monitors/CreateMonitorAction.php), [`PerformMonitorCheckAction`](file:///E:/new-idea-project/app/Actions/Monitors/PerformMonitorCheckAction.php), [`ProcessMonitorFailureAction`](file:///E:/new-idea-project/app/Actions/Incidents/ProcessMonitorFailureAction.php)).
-- **Readonly DTOs:** Strongly-typed immutable data carriers ([`CreateMonitorDTO`](file:///E:/new-idea-project/app/DTOs/CreateMonitorDTO.php), [`MonitorCheckResultDTO`](file:///E:/new-idea-project/app/DTOs/MonitorCheckResultDTO.php)).
-- **Backed PHP Enums:** Clean domain states ([`TenantPlan`](file:///E:/new-idea-project/app/Enums/TenantPlan.php), [`MonitorStatus`](file:///E:/new-idea-project/app/Enums/MonitorStatus.php), [`IncidentStatus`](file:///E:/new-idea-project/app/Enums/IncidentStatus.php), [`WebhookEvent`](file:///E:/new-idea-project/app/Enums/WebhookEvent.php)).
-- **Fail-Closed Tenancy:** Models use [`BelongsToTenant`](file:///E:/new-idea-project/app/Traits/BelongsToTenant.php) with automatic `tenant_id` stamping and anti-hijacking exceptions.
+- **Single-Responsibility Actions:** Business logic lives exclusively in invokable Action classes (e.g., [`CreateMonitorAction`](./app/Actions/Monitors/CreateMonitorAction.php), [`PerformMonitorCheckAction`](./app/Actions/Monitors/PerformMonitorCheckAction.php), [`ProcessMonitorFailureAction`](./app/Actions/Incidents/ProcessMonitorFailureAction.php)).
+- **Readonly DTOs:** Strongly-typed immutable data carriers ([`CreateMonitorDTO`](./app/DTOs/CreateMonitorDTO.php), [`MonitorCheckResultDTO`](./app/DTOs/MonitorCheckResultDTO.php)).
+- **Backed PHP Enums:** Clean domain states ([`TenantPlan`](./app/Enums/TenantPlan.php), [`MonitorStatus`](./app/Enums/MonitorStatus.php), [`IncidentStatus`](./app/Enums/IncidentStatus.php), [`WebhookEvent`](./app/Enums/WebhookEvent.php)).
+- **Fail-Closed Tenancy:** Models use [`BelongsToTenant`](./app/Traits/BelongsToTenant.php) with automatic `tenant_id` stamping and anti-hijacking exceptions.
 - **Strict Typing:** `declare(strict_types=1);` enforced across the entire `App` namespace via Pest architecture assertions.
 
 ---
