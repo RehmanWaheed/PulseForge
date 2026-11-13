@@ -36,6 +36,9 @@ class CreateMonitorAction
             return Monitor::create([
                 'tenant_id' => $lockedTenant->id,
                 'status' => MonitorStatus::Healthy,
+                // The "..." is PHP 8.1+ Array Unpacking (Spread Operator). It unpacks all
+                // key-value pairs from the DTO array directly into this create() payload,
+                // replacing verbose array_merge() while preserving keys.
                 ...$dto->toArray(),
             ]);
         });
