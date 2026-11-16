@@ -14,16 +14,16 @@ Broadcast::channel('App.Models.User.{id}', function (User $user, int|string $id)
  * Authorize private channel for tenant-scoped events (heartbeats, monitor alerts).
  */
 Broadcast::channel('tenant.{tenantId}', function (User $user, int|string $tenantId): bool {
-    return $user->tenants()->where('tenants.id', (int) $tenantId)->exists();
+    return $user->is_platform_admin || $user->tenants()->where('tenants.id', (int) $tenantId)->exists();
 });
 
 /**
  * Authorize private channel for incident war-room live chat.
  */
 Broadcast::channel('tenant.{tenantId}.incident.{incidentId}', function (User $user, int|string $tenantId, int|string $incidentId): bool {
-    $belongsToTenant = $user->tenants()->where('tenants.id', (int) $tenantId)->exists();
+    $canAccessTenant = $user->is_platform_admin || $user->tenants()->where('tenants.id', (int) $tenantId)->exists();
 
-    if (! $belongsToTenant) {
+    if (! $canAccessTenant) {
         return false;
     }
 

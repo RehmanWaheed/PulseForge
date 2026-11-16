@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\Tenant;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\GoogleProvider;
 use Mockery\MockInterface;
@@ -111,4 +112,20 @@ test('google oauth callback authenticates existing user and syncs google attribu
     $freshUser = $user->fresh();
     expect($freshUser->google_id)->toBe('google-id-987654')
         ->and($freshUser->avatar)->toBe('https://lh3.googleusercontent.com/photo.jpg');
+});
+
+test('platform super admin can access any workspace without being in tenant_user table', function () {
+    $tenant = Tenant::factory()->create(['name' => 'Acme Corporation', 'slug' => 'acme']);
+    $superAdmin = User::factory()->create([
+        'email' => 'rehman5556@gmail.com',
+        'is_platform_admin' => true,
+    ]);
+
+    expect($superAdmin->belongsToTenant($tenant))->toBeFalse()
+        ->and(DB::table('tenant_user')->where('user_id', $superAdmin->id)->count())->toBe(0);
+
+    $response = $this->actingAs($superAdmin)->get('/demo/realtime?tenant=acme');
+    $response->assertStatus(200)
+        ->assertSee('Acme Corporation')
+        ->assertSee('Super Admin');
 });

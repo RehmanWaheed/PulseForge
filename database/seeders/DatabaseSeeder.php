@@ -47,8 +47,8 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // 1c. PulseForge Platform Super-Admin
-        $superAdmin = User::query()->firstOrCreate(
+        // 1c. PulseForge Platform Super-Admin (Global SaaS Operator - Not scoped to customer tenants)
+        User::query()->firstOrCreate(
             ['email' => 'rehman5556@gmail.com'],
             [
                 'name' => 'PulseForge Platform Admin',
@@ -71,17 +71,13 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // Attach users to Acme
+        // Attach tenant users to Acme (Only customer members belong to tenant_user)
         if (! $owner->belongsToTenant($acme)) {
             $owner->tenants()->attach($acme->id, ['role' => TenantRole::Owner->value]);
         }
 
         if (! $admin->belongsToTenant($acme)) {
             $admin->tenants()->attach($acme->id, ['role' => TenantRole::Admin->value]);
-        }
-
-        if (! $superAdmin->belongsToTenant($acme)) {
-            $superAdmin->tenants()->attach($acme->id, ['role' => TenantRole::Owner->value]);
         }
 
         // 3. Create Tenant B: Cyberdyne (Free Plan - to show strict multi-tenancy isolation)
