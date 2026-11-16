@@ -129,3 +129,29 @@ test('platform super admin can access any workspace without being in tenant_user
         ->assertSee('Acme Corporation')
         ->assertSee('Super Admin');
 });
+
+test('google oauth callback marks platform admin and does not attach to tenant_user table', function () {
+    Tenant::factory()->create(['slug' => 'acme']);
+
+    $abstractUser = Mockery::mock(Laravel\Socialite\Two\User::class);
+    $abstractUser->shouldReceive('getId')->andReturn('google-id-superadmin');
+    $abstractUser->shouldReceive('getName')->andReturn('Platform Super Admin');
+    $abstractUser->shouldReceive('getEmail')->andReturn('rehman5556@gmail.com');
+    $abstractUser->shouldReceive('getAvatar')->andReturn('https://lh3.googleusercontent.com/superadmin.jpg');
+
+    /** @var MockInterface&GoogleProvider $provider */
+    $provider = Mockery::mock(GoogleProvider::class);
+    $provider->shouldReceive('user')->andReturn($abstractUser);
+
+    Socialite::shouldReceive('driver')->with('google')->andReturn($provider);
+
+    $response = $this->get('/auth/google/callback');
+
+    $response->assertRedirect('/admin');
+    $this->assertAuthenticated();
+
+    /** @var User $user */
+    $user = User::query()->where('email', 'rehman5556@gmail.com')->firstOrFail();
+    expect($user->is_platform_admin)->toBeTrue()
+        ->and(DB::table('tenant_user')->where('user_id', $user->id)->count())->toBe(0);
+});

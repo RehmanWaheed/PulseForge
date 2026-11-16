@@ -65,8 +65,9 @@ class GoogleAuthController extends Controller
 
         $user->save();
 
-        // If user has no tenant, attach to Acme Corp as Owner/Admin if matching email, or Member
-        if ($user->tenants()->count() === 0) {
+        // Platform admins supervise all tenants globally and do not belong to customer tenant_user pivot.
+        // For standard tenant users with no tenant, attach to Acme Corp as Owner/Admin/Member.
+        if (! $user->is_platform_admin && $user->tenants()->count() === 0) {
             /** @var Tenant|null $acme */
             $acme = Tenant::query()->where('slug', 'acme')->first();
 
@@ -74,7 +75,6 @@ class GoogleAuthController extends Controller
                 $role = match ($email) {
                     'learner.den5556@gmail.com' => TenantRole::Owner,
                     'khrehmanwaheed@gmail.com' => TenantRole::Admin,
-                    'rehman5556@gmail.com' => TenantRole::Owner,
                     default => TenantRole::Member,
                 };
 
@@ -84,6 +84,8 @@ class GoogleAuthController extends Controller
 
         Auth::login($user, remember: true);
 
-        return redirect()->intended('/demo/realtime');
+        $target = $user->is_platform_admin ? '/admin' : '/demo/realtime';
+
+        return redirect()->intended($target);
     }
 }

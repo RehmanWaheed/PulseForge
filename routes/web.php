@@ -7,6 +7,7 @@ use App\Actions\Incidents\ProcessMonitorRecoveryAction;
 use App\Actions\Incidents\SendIncidentChatMessageAction;
 use App\Actions\Monitors\PerformMonitorCheckAction;
 use App\Events\MonitorCheckedEvent;
+use App\Http\Controllers\Admin\PlatformAdminController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Models\Incident;
@@ -32,8 +33,19 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->midd
 // Protected Workspace Routes
 Route::middleware('auth')->group(function (): void {
     Route::get('/', function () {
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        if ($user?->is_platform_admin) {
+            return redirect('/admin');
+        }
+
         return redirect('/demo/realtime');
     });
+
+    Route::get('/admin', [PlatformAdminController::class, 'index'])
+        ->middleware('platform_admin')
+        ->name('admin.dashboard');
 
     Route::get('/demo/realtime', function (Request $request, TenantContext $context) {
         /** @var User $currentUser */

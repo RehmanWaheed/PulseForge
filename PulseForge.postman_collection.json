@@ -358,6 +358,47 @@
                         "description": "Logs out the authenticated user, invalidates the active session, regenerates the CSRF token, and redirects back to `/login`."
                     },
                     "response": []
+                },
+                {
+                    "name": "View Platform Admin Control Center (/admin)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test(\"Contains Platform Super-Admin UI markers\", function () {",
+                                    "    pm.expect(pm.response.text()).to.include(\"Platform Super-Admin\");",
+                                    "    pm.expect(pm.response.text()).to.include(\"Customer Workspaces Directory\");",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "text/html,application/xhtml+xml",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/admin",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "admin"
+                            ]
+                        },
+                        "description": "Loads the dedicated PulseForge Platform Super-Admin Control Center (`/admin`). Requires an active session as a Platform Admin (`rehman5556@gmail.com`). Returns HTTP 403 Forbidden for non-platform customer accounts."
+                    },
+                    "response": []
                 }
             ]
         },

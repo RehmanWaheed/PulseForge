@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -44,7 +45,11 @@ class LoginController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended('/demo/realtime');
+        /** @var User|null $user */
+        $user = Auth::user();
+        $target = ($user !== null && $user->is_platform_admin) ? '/admin' : '/demo/realtime';
+
+        return redirect()->intended($target);
     }
 
     /**
