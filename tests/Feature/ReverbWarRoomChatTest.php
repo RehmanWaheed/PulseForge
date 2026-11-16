@@ -183,13 +183,16 @@ test('POST /demo/realtime/trigger-check executes monitor check and broadcasts', 
     ]);
 
     $tenant = Tenant::factory()->create(['slug' => 'acme']);
+    $user = User::factory()->create();
+    $user->tenants()->attach($tenant->id, ['role' => TenantRole::Admin->value]);
+
     $monitor = Monitor::factory()->create([
         'tenant_id' => $tenant->id,
         'url' => 'https://status.example.com',
         'expected_status_code' => 200,
     ]);
 
-    $response = $this->postJson('/demo/realtime/trigger-check', [
+    $response = $this->actingAs($user)->postJson('/demo/realtime/trigger-check', [
         'monitor_id' => $monitor->id,
     ]);
 
@@ -218,13 +221,13 @@ test('GET /demo/realtime renders successfully for admin and engineer views', fun
     $engineer = User::factory()->create(['email' => 'engineer@pulseforge.test']);
     $engineer->tenants()->attach($tenant->id, ['role' => TenantRole::Admin->value]);
 
-    $response = $this->get('/demo/realtime');
+    $response = $this->actingAs($admin)->get('/demo/realtime');
     $response->assertOk()
         ->assertSee('PulseForge')
         ->assertSee('Reverb Live')
         ->assertSee($admin->name);
 
-    $responseEngineer = $this->get('/demo/realtime?as=engineer');
+    $responseEngineer = $this->actingAs($engineer)->get('/demo/realtime');
     $responseEngineer->assertOk()
         ->assertSee('PulseForge')
         ->assertSee($engineer->name);

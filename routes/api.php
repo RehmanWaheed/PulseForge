@@ -8,6 +8,7 @@ use App\Models\Monitor;
 use App\Services\Tenancy\TenantContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Validation\Rule;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -43,10 +44,22 @@ Route::middleware('tenant')->prefix('v1')->group(function (): void {
         $tenant = $context->getOrFail();
         /** @var array<string, mixed> $validated */
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'url' => ['required', 'url'],
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('monitors', 'name')->where('tenant_id', $tenant->id),
+            ],
+            'url' => [
+                'required',
+                'url',
+                Rule::unique('monitors', 'url')->where('tenant_id', $tenant->id),
+            ],
             'check_interval_seconds' => ['nullable', 'integer', 'min:10'],
             'expected_status_code' => ['nullable', 'integer'],
+        ], [
+            'name.unique' => 'A monitor with this name already exists in your workspace.',
+            'url.unique' => 'A monitor for this target URL already exists in your workspace.',
         ]);
 
         $dto = CreateMonitorDTO::fromArray($validated);

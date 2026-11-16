@@ -26,20 +26,34 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. Create Team Users
-        $user = User::query()->firstOrCreate(
-            ['email' => 'admin@pulseforge.test'],
+        // 1. Create Users
+        // 1a. Acme Corporation Owner
+        $owner = User::query()->firstOrCreate(
+            ['email' => 'learner.den5556@gmail.com'],
             [
-                'name' => 'Demo Admin (Incident Lead)',
+                'name' => 'Acme Owner',
                 'password' => Hash::make('password'),
+                'is_platform_admin' => false,
             ]
         );
 
-        $engineer = User::query()->firstOrCreate(
-            ['email' => 'engineer@pulseforge.test'],
+        // 1b. Acme Corporation Admin
+        $admin = User::query()->firstOrCreate(
+            ['email' => 'khrehmanwaheed@gmail.com'],
             [
-                'name' => 'Alex Rivers (DevOps Lead)',
+                'name' => 'Acme Admin',
                 'password' => Hash::make('password'),
+                'is_platform_admin' => false,
+            ]
+        );
+
+        // 1c. PulseForge Platform Super-Admin
+        $superAdmin = User::query()->firstOrCreate(
+            ['email' => 'rehman5556@gmail.com'],
+            [
+                'name' => 'PulseForge Platform Admin',
+                'password' => Hash::make('password'),
+                'is_platform_admin' => true,
             ]
         );
 
@@ -57,13 +71,17 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // Attach users to Acme as Owner & Member
-        if (! $user->belongsToTenant($acme)) {
-            $user->tenants()->attach($acme->id, ['role' => TenantRole::Owner->value]);
+        // Attach users to Acme
+        if (! $owner->belongsToTenant($acme)) {
+            $owner->tenants()->attach($acme->id, ['role' => TenantRole::Owner->value]);
         }
 
-        if (! $engineer->belongsToTenant($acme)) {
-            $engineer->tenants()->attach($acme->id, ['role' => TenantRole::Admin->value]);
+        if (! $admin->belongsToTenant($acme)) {
+            $admin->tenants()->attach($acme->id, ['role' => TenantRole::Admin->value]);
+        }
+
+        if (! $superAdmin->belongsToTenant($acme)) {
+            $superAdmin->tenants()->attach($acme->id, ['role' => TenantRole::Owner->value]);
         }
 
         // 3. Create Tenant B: Cyberdyne (Free Plan - to show strict multi-tenancy isolation)

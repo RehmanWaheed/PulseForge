@@ -34,6 +34,8 @@ return new class extends Migration
 
             $table->index(['tenant_id', 'status']);
             $table->index(['is_active', 'last_checked_at']);
+            $table->unique(['tenant_id', 'url'], 'monitors_tenant_url_unique');
+            $table->unique(['tenant_id', 'name'], 'monitors_tenant_name_unique');
         });
     }
 

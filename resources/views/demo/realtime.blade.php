@@ -49,18 +49,32 @@
                     <span id="ws-text">Connecting to Reverb (ws://localhost:8085)...</span>
                 </div>
 
-                <div class="hidden sm:flex items-center bg-slate-800/80 rounded-lg p-1 border border-slate-700/60 text-xs">
-                    <span class="px-2 text-slate-400">Signed in as:</span>
-                    <span class="font-semibold text-indigo-300 mr-2">{{ $currentUser->name }}</span>
-                    @if($currentUser->email === 'admin@pulseforge.test')
-                        <a href="/demo/realtime?as=engineer" target="_blank" class="px-2 py-1 rounded bg-slate-700 hover:bg-indigo-600 text-white font-medium transition flex items-center gap-1">
-                            <span>Open 2nd Tab as DevOps</span> ↗
-                        </a>
-                    @else
-                        <a href="/demo/realtime?as=admin" target="_blank" class="px-2 py-1 rounded bg-slate-700 hover:bg-indigo-600 text-white font-medium transition flex items-center gap-1">
-                            <span>Open 2nd Tab as Admin</span> ↗
-                        </a>
-                    @endif
+                <div class="flex items-center bg-slate-800/80 rounded-lg p-1 border border-slate-700/60 text-xs gap-2">
+                    <div class="flex items-center gap-1.5 px-2">
+                        @if($currentUser->avatar)
+                            <img src="{{ $currentUser->avatar }}" alt="{{ $currentUser->name }}" class="h-5 w-5 rounded-full object-cover">
+                        @else
+                            <span class="h-5 w-5 rounded-full bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center">
+                                {{ strtoupper(substr($currentUser->name, 0, 1)) }}
+                            </span>
+                        @endif
+                        <div class="text-left">
+                            <div class="font-semibold text-slate-200 truncate max-w-[120px] sm:max-w-none leading-tight">{{ $currentUser->name }}</div>
+                            <div class="text-[10px] text-slate-400 font-mono truncate">{{ $currentUser->email }}</div>
+                        </div>
+                        @if($currentUser->is_platform_admin)
+                            <span class="px-1.5 py-0.5 rounded text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/30 font-mono">Super Admin</span>
+                        @else
+                            <span class="px-1.5 py-0.5 rounded text-[10px] bg-slate-700 text-slate-300 font-mono">{{ ucfirst($currentUser->roleForTenant($tenant)?->value ?? 'member') }}</span>
+                        @endif
+                    </div>
+
+                    <form action="{{ route('logout') }}" method="POST" class="inline">
+                        @csrf
+                        <button type="submit" class="px-2.5 py-1 rounded bg-slate-700/80 hover:bg-rose-600 text-slate-300 hover:text-white font-medium transition flex items-center gap-1 text-xs">
+                            <span>Sign Out</span> 🚪
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -73,10 +87,9 @@
         <div class="rounded-xl bg-gradient-to-r from-indigo-950/60 to-purple-950/40 border border-indigo-800/40 p-4 flex items-start space-x-3">
             <span class="text-2xl">💡</span>
             <div class="text-sm">
-                <span class="font-semibold text-indigo-300">How to test live WebSockets:</span>
+                <span class="font-semibold text-indigo-300">Multi-User Real-Time Collaboration:</span>
                 <span class="text-slate-300">
-                    Open this page in two browser tabs or side-by-side windows (one as Admin, one as DevOps). Click 
-                    <span class="font-mono text-xs bg-slate-800 px-1.5 py-0.5 rounded text-indigo-300">⚡ Ping</span> or type in the Incident War Room chat — both tabs update instantly via Laravel Reverb!
+                    Open an Incognito or 2nd browser window, log in as <span class="font-mono text-xs bg-slate-800 px-1.5 py-0.5 rounded text-indigo-300">khrehmanwaheed@gmail.com</span> (Acme Admin), and test live heartbeats and incident war room chat simultaneously!
                 </span>
             </div>
         </div>
