@@ -118,7 +118,111 @@
             </div>
         </div>
 
-        <!-- Section 2: Incident War Room Live Chat -->
+        <!-- Section 2: Live Probe Telemetry & Check History -->
+        <div class="bg-slate-900/90 rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
+            <div class="p-4 bg-slate-850 border-b border-slate-800 flex items-center justify-between flex-wrap gap-2">
+                <div class="flex items-center space-x-3">
+                    <div class="h-8 w-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-lg border border-indigo-500/30">
+                        📊
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="text-sm font-bold text-white">Live Telemetry & Probe Check History</h3>
+                            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold flex items-center gap-1">
+                                <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping"></span> Live Stream
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-400">
+                            Workspace: <span class="font-semibold text-slate-200">{{ $tenant->name }}</span> (<code class="text-indigo-300">private-tenant.{{ $tenant->id }}</code>) &bull; Auto-updates in real time via Reverb
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-mono px-2.5 py-1 rounded-md bg-slate-800 border border-slate-700 text-slate-300">
+                        Scoped to {{ $tenant->name }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Table Container -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-800 bg-slate-950/70 text-slate-400 uppercase font-mono text-[11px] tracking-wider">
+                            <th class="py-3 px-4">Time</th>
+                            <th class="py-3 px-4">Monitored Service</th>
+                            <th class="py-3 px-4">HTTP Status</th>
+                            <th class="py-3 px-4">Latency</th>
+                            <th class="py-3 px-4">SSL Cert</th>
+                            <th class="py-3 px-4">Result</th>
+                        </tr>
+                    </thead>
+                    <tbody id="check-logs-tbody" class="divide-y divide-slate-800/60 font-sans">
+                        @forelse($checkLogs as $log)
+                            <tr class="hover:bg-slate-800/40 transition">
+                                <td class="py-3 px-4 text-slate-400 font-mono whitespace-nowrap">
+                                    <span title="{{ $log->checked_at->toIso8601String() }}">{{ $log->checked_at->diffForHumans() }}</span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <div class="font-medium text-slate-200">{{ $log->monitor?->name ?? 'Service #' . $log->monitor_id }}</div>
+                                    <div class="font-mono text-[10px] text-slate-500 truncate max-w-xs">{{ $log->monitor?->url }}</div>
+                                </td>
+                                <td class="py-3 px-4 font-mono">
+                                    @if($log->status_code)
+                                        <span class="px-2 py-0.5 rounded text-[11px] font-semibold {{ $log->status_code < 400 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20' }}">
+                                            {{ $log->status_code }}
+                                        </span>
+                                    @else
+                                        <span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                            ERR / TIMEOUT
+                                        </span>
+                                    @endif
+                                </td>
+                                <td class="py-3 px-4 font-mono font-semibold {{ ($log->response_time_ms ?? 0) < 300 ? 'text-emerald-400' : (($log->response_time_ms ?? 0) < 800 ? 'text-amber-400' : 'text-rose-400') }}">
+                                    {{ $log->response_time_ms !== null ? $log->response_time_ms . ' ms' : '--' }}
+                                </td>
+                                <td class="py-3 px-4 font-mono">
+                                    @if($log->ssl_is_valid === true)
+                                        <span class="text-emerald-400 flex items-center gap-1">
+                                            <span>🔒</span> Valid {{ $log->ssl_days_remaining ? '(' . $log->ssl_days_remaining . 'd)' : '' }}
+                                        </span>
+                                    @elseif($log->ssl_is_valid === false)
+                                        <span class="text-rose-400 flex items-center gap-1">
+                                            <span>⚠️</span> Invalid
+                                        </span>
+                                    @else
+                                        <span class="text-slate-500">N/A</span>
+                                    @endif
+                                </td>
+                                <td class="py-3 px-4 whitespace-nowrap">
+                                    @if($log->is_successful)
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                            ✓ PASS
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20" title="{{ $log->error_message }}">
+                                            ✕ FAIL
+                                        </span>
+                                        @if($log->error_message)
+                                            <div class="text-[10px] text-rose-300/80 font-mono truncate max-w-xs mt-0.5">{{ $log->error_message }}</div>
+                                        @endif
+                                    @endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr id="no-check-logs">
+                                <td colspan="6" class="py-8 text-center text-slate-500 font-mono text-xs">
+                                    No probe checks recorded yet for {{ $tenant->name }}. Click <span class="text-indigo-400 font-semibold">⚡ Ping</span> above to trigger a live check!
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Section 3: Incident War Room Live Chat -->
         @if($incident !== null)
             <div class="bg-slate-900/90 rounded-2xl border border-slate-800 overflow-hidden flex flex-col shadow-2xl">
                 <!-- War Room Header -->
@@ -280,6 +384,7 @@
                     }, 500);
                 }
 
+                appendTelemetryLog(e);
                 playChime(e.is_successful ? 520 : 300);
             });
 
@@ -290,6 +395,58 @@
                     appendMessage(e.user_name, e.message, 'Just now', e.user_id === currentUserId);
                     playChime(660);
                 });
+        }
+
+        // Prepend incoming telemetry check result to UI table
+        function appendTelemetryLog(e) {
+            const noLogsEl = document.getElementById('no-check-logs');
+            if (noLogsEl) noLogsEl.remove();
+
+            const tbody = document.getElementById('check-logs-tbody');
+            if (!tbody) return;
+
+            const tr = document.createElement('tr');
+            tr.className = `transition duration-500 ${e.is_successful ? 'bg-emerald-500/20' : 'bg-rose-500/25'}`;
+
+            const latencyClass = (e.response_time_ms || 0) < 300 ? 'text-emerald-400' : ((e.response_time_ms || 0) < 800 ? 'text-amber-400' : 'text-rose-400');
+            const statusBadge = e.status_code 
+                ? `<span class="px-2 py-0.5 rounded text-[11px] font-semibold ${e.status_code < 400 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">${e.status_code}</span>`
+                : `<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">ERR / TIMEOUT</span>`;
+
+            let sslBadge = '<span class="text-slate-500">N/A</span>';
+            if (e.ssl_is_valid === true) {
+                sslBadge = `<span class="text-emerald-400 flex items-center gap-1"><span>🔒</span> Valid ${e.ssl_days_remaining ? '(' + e.ssl_days_remaining + 'd)' : ''}</span>`;
+            } else if (e.ssl_is_valid === false) {
+                sslBadge = '<span class="text-rose-400 flex items-center gap-1"><span>⚠️</span> Invalid</span>';
+            }
+
+            const outcomeBadge = e.is_successful
+                ? '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">✓ PASS</span>'
+                : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20" title="${escapeHtml(e.error_message || '')}">✕ FAIL</span>${e.error_message ? `<div class="text-[10px] text-rose-300/80 font-mono truncate max-w-xs mt-0.5">${escapeHtml(e.error_message)}</div>` : ''}`;
+
+            tr.innerHTML = `
+                <td class="py-3 px-4 text-slate-400 font-mono whitespace-nowrap">
+                    <span class="text-indigo-300 font-semibold">${escapeHtml(e.checked_at_human || 'Just now')}</span>
+                </td>
+                <td class="py-3 px-4">
+                    <div class="font-medium text-slate-200">${escapeHtml(e.monitor_name || 'Service #' + e.monitor_id)}</div>
+                    <div class="font-mono text-[10px] text-slate-500 truncate max-w-xs">${escapeHtml(e.monitor_url || '')}</div>
+                </td>
+                <td class="py-3 px-4 font-mono">${statusBadge}</td>
+                <td class="py-3 px-4 font-mono font-semibold ${latencyClass}">${e.response_time_ms !== null && e.response_time_ms !== undefined ? e.response_time_ms + ' ms' : '--'}</td>
+                <td class="py-3 px-4 font-mono">${sslBadge}</td>
+                <td class="py-3 px-4 whitespace-nowrap">${outcomeBadge}</td>
+            `;
+
+            tbody.insertBefore(tr, tbody.firstChild);
+
+            setTimeout(() => {
+                tr.className = 'hover:bg-slate-800/40 transition duration-500';
+            }, 1500);
+
+            while (tbody.children.length > 15) {
+                tbody.removeChild(tbody.lastChild);
+            }
         }
 
         // Append message to UI

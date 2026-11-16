@@ -50,10 +50,17 @@ class MonitorCheckedEvent implements ShouldBroadcastNow
     {
         return [
             'monitor_id' => $this->monitor->id,
+            'monitor_name' => $this->monitor->name,
+            'monitor_url' => $this->monitor->url,
             'status' => $this->monitor->status->value,
+            'status_code' => $this->result->statusCode,
             'response_time_ms' => $this->result->responseTimeMs,
             'is_successful' => $this->result->isSuccessful,
+            'error_message' => $this->result->errorMessage,
+            'ssl_is_valid' => $this->result->sslIsValid,
+            'ssl_days_remaining' => $this->result->sslDaysRemaining,
             'checked_at' => now()->toIso8601String(),
+            'checked_at_human' => 'Just now',
         ];
     }
 }

@@ -2,11 +2,14 @@
 
 declare(strict_types=1);
 
+use App\Actions\Incidents\ProcessMonitorFailureAction;
+use App\Actions\Incidents\ProcessMonitorRecoveryAction;
 use App\Actions\Incidents\SendIncidentChatMessageAction;
 use App\Actions\Monitors\PerformMonitorCheckAction;
 use App\Events\MonitorCheckedEvent;
 use App\Models\Incident;
 use App\Models\Monitor;
+use App\Models\MonitorCheckResult;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\Tenancy\TenantContext;
@@ -45,12 +48,20 @@ Route::get('/demo/realtime', function (Request $request, TenantContext $context)
         ? $incident->chatMessages()->with('user')->oldest()->get()
         : collect();
 
+    $checkLogs = MonitorCheckResult::withoutGlobalScopes()
+        ->where('tenant_id', $tenant->id)
+        ->with('monitor')
+        ->latest('checked_at')
+        ->take(15)
+        ->get();
+
     return view('demo.realtime', [
         'tenant' => $tenant,
         'currentUser' => $currentUser,
         'monitors' => $monitors,
         'incident' => $incident,
         'messages' => $messages,
+        'checkLogs' => $checkLogs,
         'reverbKey' => (string) config('broadcasting.client.key', ''),
         'reverbHost' => (string) config('broadcasting.client.host', 'localhost'),
         'reverbPort' => (int) config('broadcasting.client.port', 8085),
@@ -90,7 +101,13 @@ Route::post('/demo/realtime/messages', function (Request $request, TenantContext
     ], 201);
 });
 
-Route::post('/demo/realtime/trigger-check', function (Request $request, TenantContext $context, PerformMonitorCheckAction $action) {
+Route::post('/demo/realtime/trigger-check', function (
+    Request $request,
+    TenantContext $context,
+    PerformMonitorCheckAction $action,
+    ProcessMonitorRecoveryAction $recoveryAction,
+    ProcessMonitorFailureAction $failureAction
+) {
     /** @var array<string, mixed> $validated */
     $validated = $request->validate([
         'monitor_id' => ['required', 'integer'],
@@ -106,6 +123,12 @@ Route::post('/demo/realtime/trigger-check', function (Request $request, TenantCo
     $resultDTO = $action($monitor);
 
     MonitorCheckedEvent::dispatch($monitor, $resultDTO);
+
+    if ($resultDTO->isSuccessful) {
+        $recoveryAction($monitor, $resultDTO);
+    } else {
+        $failureAction($monitor, $resultDTO);
+    }
 
     return response()->json([
         'success' => true,
