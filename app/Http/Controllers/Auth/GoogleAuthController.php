@@ -9,7 +9,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\GoogleProvider;
 use Throwable;
@@ -30,12 +32,18 @@ class GoogleAuthController extends Controller
     /**
      * Obtain the user information from Google and authenticate.
      */
-    public function callback(): RedirectResponse
+    public function callback(Request $request): RedirectResponse
     {
         try {
             /** @var \Laravel\Socialite\Two\User $googleUser */
             $googleUser = Socialite::driver('google')->user();
         } catch (Throwable $e) {
+            Log::warning('Google OAuth callback failed.', [
+                'error' => $e->getMessage(),
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
             return redirect('/login')->withErrors([
                 'email' => 'Google authentication failed: '.$e->getMessage(),
             ]);
@@ -43,6 +51,11 @@ class GoogleAuthController extends Controller
 
         $email = $googleUser->getEmail();
         if ($email === null || $email === '') {
+            Log::warning('Google OAuth returned no email address.', [
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
             return redirect('/login')->withErrors([
                 'email' => 'Unable to retrieve email from Google account.',
             ]);
@@ -83,6 +96,17 @@ class GoogleAuthController extends Controller
         }
 
         Auth::login($user, remember: true);
+
+        Log::info('User authenticated successfully via Google OAuth.', [
+            'user_id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'auth_method' => 'google_oauth',
+            'google_id' => $user->google_id,
+            'is_platform_admin' => $user->is_platform_admin,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
 
         $target = $user->is_platform_admin ? '/admin' : '/demo/realtime';
 

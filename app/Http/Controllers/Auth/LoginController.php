@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -38,6 +39,13 @@ class LoginController extends Controller
         $remember = $request->boolean('remember');
 
         if (! Auth::attempt(['email' => $credentials['email'], 'password' => $credentials['password']], $remember)) {
+            Log::warning('Failed login attempt.', [
+                'email' => $credentials['email'],
+                'auth_method' => 'email_password',
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+
             throw ValidationException::withMessages([
                 'email' => __('auth.failed'),
             ]);
@@ -45,9 +53,20 @@ class LoginController extends Controller
 
         $request->session()->regenerate();
 
-        /** @var User|null $user */
+        /** @var User $user */
         $user = Auth::user();
-        $target = ($user !== null && $user->is_platform_admin) ? '/admin' : '/demo/realtime';
+
+        Log::info('User authenticated successfully.', [
+            'user_id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'auth_method' => 'email_password',
+            'is_platform_admin' => $user->is_platform_admin,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+
+        $target = $user->is_platform_admin ? '/admin' : '/demo/realtime';
 
         return redirect()->intended($target);
     }
@@ -57,6 +76,17 @@ class LoginController extends Controller
      */
     public function logout(Request $request): RedirectResponse
     {
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        if ($user !== null) {
+            Log::info('User logged out.', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'ip_address' => $request->ip(),
+            ]);
+        }
+
         Auth::logout();
 
         $request->session()->invalidate();

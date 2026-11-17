@@ -36,6 +36,10 @@ class DatabaseSeeder extends Seeder
                 'is_platform_admin' => false,
             ]
         );
+        if ($owner->password === null) {
+            $owner->password = Hash::make('password');
+            $owner->save();
+        }
 
         // 1b. Acme Corporation Admin
         $admin = User::query()->firstOrCreate(
@@ -46,9 +50,13 @@ class DatabaseSeeder extends Seeder
                 'is_platform_admin' => false,
             ]
         );
+        if ($admin->password === null) {
+            $admin->password = Hash::make('password');
+            $admin->save();
+        }
 
         // 1c. PulseForge Platform Super-Admin (Global SaaS Operator - Not scoped to customer tenants)
-        User::query()->firstOrCreate(
+        $superAdmin = User::query()->firstOrCreate(
             ['email' => 'rehman5556@gmail.com'],
             [
                 'name' => 'PulseForge Platform Admin',
@@ -56,6 +64,10 @@ class DatabaseSeeder extends Seeder
                 'is_platform_admin' => true,
             ]
         );
+        if ($superAdmin->password === null) {
+            $superAdmin->password = Hash::make('password');
+            $superAdmin->save();
+        }
 
         // 2. Create Tenant A: Acme Corp (Pro Plan)
         /** @var Tenant $acme */

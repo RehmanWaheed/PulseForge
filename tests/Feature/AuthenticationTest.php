@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\GoogleProvider;
 use Mockery\MockInterface;
@@ -154,4 +155,64 @@ test('google oauth callback marks platform admin and does not attach to tenant_u
     $user = User::query()->where('email', 'rehman5556@gmail.com')->firstOrFail();
     expect($user->is_platform_admin)->toBeTrue()
         ->and(DB::table('tenant_user')->where('user_id', $user->id)->count())->toBe(0);
+});
+
+test('successful email password login writes structured log with user and auth method', function () {
+    Log::spy();
+
+    $user = User::factory()->create([
+        'email' => 'login-log-test@pulseforge.test',
+        'password' => bcrypt('password'),
+    ]);
+
+    $this->post('/login', [
+        'email' => 'login-log-test@pulseforge.test',
+        'password' => 'password',
+    ]);
+
+    Log::shouldHaveReceived('info')->withArgs(function (string $message, array $context) use ($user): bool {
+        return $message === 'User authenticated successfully.'
+            && $context['user_id'] === $user->id
+            && $context['auth_method'] === 'email_password';
+    });
+});
+
+test('failed login attempt writes warning log with attempted email and auth method', function () {
+    Log::spy();
+
+    $this->post('/login', [
+        'email' => 'nonexistent@pulseforge.test',
+        'password' => 'wrong-pass',
+    ]);
+
+    Log::shouldHaveReceived('warning')->withArgs(function (string $message, array $context): bool {
+        return $message === 'Failed login attempt.'
+            && $context['email'] === 'nonexistent@pulseforge.test'
+            && $context['auth_method'] === 'email_password';
+    });
+});
+
+test('google oauth login writes structured log with google auth method', function () {
+    Log::spy();
+    Tenant::factory()->create(['slug' => 'acme']);
+
+    $abstractUser = Mockery::mock(Laravel\Socialite\Two\User::class);
+    $abstractUser->shouldReceive('getId')->andReturn('google-id-log-test');
+    $abstractUser->shouldReceive('getName')->andReturn('OAuth Log User');
+    $abstractUser->shouldReceive('getEmail')->andReturn('oauth-log-user@pulseforge.test');
+    $abstractUser->shouldReceive('getAvatar')->andReturn(null);
+
+    /** @var MockInterface&GoogleProvider $provider */
+    $provider = Mockery::mock(GoogleProvider::class);
+    $provider->shouldReceive('user')->andReturn($abstractUser);
+
+    Socialite::shouldReceive('driver')->with('google')->andReturn($provider);
+
+    $this->get('/auth/google/callback');
+
+    Log::shouldHaveReceived('info')->withArgs(function (string $message, array $context): bool {
+        return $message === 'User authenticated successfully via Google OAuth.'
+            && $context['email'] === 'oauth-log-user@pulseforge.test'
+            && $context['auth_method'] === 'google_oauth';
+    });
 });
